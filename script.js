@@ -141,6 +141,25 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('.next-arrow').click();
         }
     });
+
+    // Handle placeholder text for form inputs
+    const formInputs = document.querySelectorAll('#bookingForm input, #bookingForm textarea');
+    
+    formInputs.forEach(input => {
+        const originalPlaceholder = input.placeholder;
+        
+        input.addEventListener('focus', function() {
+            if (this.placeholder.startsWith('e.g.')) {
+                this.placeholder = '';
+            }
+        });
+
+        input.addEventListener('blur', function() {
+            if (this.value === '') {
+                this.placeholder = originalPlaceholder;
+            }
+        });
+    });
 });
 
 // Testimonial Carousel
@@ -703,41 +722,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Add this to your testimonial functionality
-function handleTestimonialScroll() {
-    const cards = document.querySelectorAll('.testimonial-card');
-    
-    cards.forEach(card => {
-        // Check if content is scrollable
-        const isScrollable = card.scrollHeight > card.clientHeight;
-        card.classList.toggle('scrollable', isScrollable);
-
-        // Handle vertical scroll
-        let startY;
-        let startScrollTop;
-
-        card.addEventListener('touchstart', (e) => {
-            startY = e.touches[0].clientY;
-            startScrollTop = card.scrollTop;
-            
-            // If at top or bottom, prevent parent swipe handling
-            if ((card.scrollTop <= 0 && startY > e.touches[0].clientY) ||
-                (card.scrollTop + card.clientHeight >= card.scrollHeight && 
-                 startY < e.touches[0].clientY)) {
-                e.stopPropagation();
-            }
-        }, { passive: true });
-
-        card.addEventListener('touchmove', (e) => {
-            const deltaY = e.touches[0].clientY - startY;
-            if (Math.abs(deltaY) > 10) { // Threshold for vertical scroll
-                e.stopPropagation();
-                card.scrollTop = startScrollTop - deltaY;
-            }
-        }, { passive: true });
-    });
-}
-
 // Add this call to your DOMContentLoaded event
 document.addEventListener('DOMContentLoaded', function() {
     handleTestimonialScroll();
@@ -807,4 +791,86 @@ document.addEventListener('DOMContentLoaded', function() {
 window.addEventListener('error', function(e) {
     console.error('Global error:', e);
     // Optionally show user-friendly error message
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const bookingForm = document.getElementById('bookingForm');
+    
+    // Initialize EmailJS with your public key
+    emailjs.init("p7N91eLXRfrehkYPR");
+    
+    bookingForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Add loading state to button
+        const submitButton = bookingForm.querySelector('button');
+        submitButton.disabled = true;
+        submitButton.innerHTML = 'Sending...';
+
+        // Send email using EmailJS
+        emailjs.send(
+            "service_ntz5x6h",
+            "template_zcvqpkh",
+            {
+                from_name: document.getElementById('name').value,
+                reply_to: document.getElementById('email').value,
+                phone_number: document.getElementById('phone').value,
+                postcode: document.getElementById('postcode').value,
+                vehicle_reg: document.getElementById('vehicle_reg').value,
+                vehicle_make: document.getElementById('vehicle_make').value,
+                damage_type: document.getElementById('damage_type').value,
+                damage_location: document.getElementById('damage_location').value,
+                message: document.getElementById('message').value
+            }
+        )
+        .then(function(response) {
+            console.log("SUCCESS", response);
+            alert('Request submitted successfully! We will contact you shortly to arrange the service.');
+            bookingForm.reset();
+        })
+        .catch(function(error) {
+            console.log("FAILED", error);
+            alert('Sorry, there was an error submitting your request. Please try calling us directly.');
+        })
+        .finally(function() {
+            // Reset button state
+            submitButton.disabled = false;
+            submitButton.innerHTML = 'Submit Request';
+        });
+    });
+});
+
+// Add these functions to your script.js
+function openServiceModal() {
+    const modal = document.getElementById('serviceModal');
+    document.body.classList.add('modal-open');
+    // Just add active class, no need to set display
+    modal.classList.add('active');
+}
+
+function closeServiceModal() {
+    const modal = document.getElementById('serviceModal');
+    document.body.classList.remove('modal-open');
+    modal.classList.remove('active');
+    // No need for setTimeout or display changes
+}
+
+// Add these event listeners to your DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Close modal when clicking the close button
+    document.querySelector('.close-modal').addEventListener('click', closeServiceModal);
+
+    // Close modal when clicking outside
+    document.getElementById('serviceModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeServiceModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeServiceModal();
+        }
+    });
 });

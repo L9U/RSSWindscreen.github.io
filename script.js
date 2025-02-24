@@ -167,106 +167,165 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('DOMContentLoaded', function() {
     const track = document.querySelector('.testimonial-track');
     const cards = Array.from(document.querySelectorAll('.testimonial-card'));
-    const dots = Array.from(document.querySelectorAll('.dot'));
+    const prevButton = document.querySelector('.prev-review');
+    const nextButton = document.querySelector('.next-review');
     let currentIndex = 0;
     let autoPlayTimer;
     let isHovered = false;
     let isTransitioning = false;
     
     // Clone first and last slides for infinite loop
-    const firstCardClone = cards[0].cloneNode(true);
-    const lastCardClone = cards[cards.length - 1].cloneNode(true);
-    track.appendChild(firstCardClone);
-    track.insertBefore(lastCardClone, cards[0]);
+    const firstClone = cards[0].cloneNode(true);
+    const secondClone = cards[1].cloneNode(true);
+    const lastClone = cards[cards.length - 1].cloneNode(true);
+    const secondLastClone = cards[cards.length - 2].cloneNode(true);
     
-    // Adjust initial position to show first real slide
-    track.style.transform = `translateX(-100%)`;
+    // Add clones to both ends
+    track.appendChild(firstClone);
+    track.appendChild(secondClone);
+    track.insertBefore(lastClone, cards[0]);
+    track.insertBefore(secondLastClone, cards[0]);
+    
+    // Adjust initial position
+    track.style.transform = `translateX(-200%)`;
     
     function updateCarousel(transition = true) {
-        if (isTransitioning) return; // Prevent multiple transitions
+        if (isTransitioning) return;
         isTransitioning = true;
         
         track.style.transition = transition ? 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)' : 'none';
-        track.style.transform = `translateX(-${(currentIndex + 1) * 100}%)`;
+        track.style.transform = `translateX(-${(currentIndex + 2) * 100}%)`;
         
-        dots.forEach((dot, i) => {
-            dot.classList.toggle('active', i === currentIndex);
-        });
-        
-        // If no transition, immediately allow next slide
         if (!transition) {
             isTransitioning = false;
         }
     }
-    
-    function startAutoPlay() {
-        stopAutoPlay(); // Clear any existing timer
-        if (!isHovered) { // Only start if not being hovered
-            autoPlayTimer = setInterval(() => {
-                currentIndex++;
-                updateCarousel();
-            }, 7000);
-        }
+
+    function goToNext() {
+        if (isTransitioning) return;
+        currentIndex++;
+        updateCarousel();
+    }
+
+    function goToPrev() {
+        if (isTransitioning) return;
+        currentIndex--;
+        updateCarousel();
     }
     
+    // Handle infinite scroll
+    track.addEventListener('transitionend', () => {
+        isTransitioning = false;
+        
+        if (currentIndex >= cards.length) {
+            currentIndex = 0;
+            track.style.transition = 'none';
+            track.style.transform = `translateX(-200%)`;
+        } else if (currentIndex < 0) {
+            currentIndex = cards.length - 1;
+            track.style.transition = 'none';
+            track.style.transform = `translateX(-${(cards.length + 1) * 100}%)`;
+        }
+    });
+
+    // Autoplay functionality
+    function startAutoPlay() {
+        stopAutoPlay();
+        if (!isHovered) {
+            autoPlayTimer = setInterval(goToNext, 5000);
+        }
+    }
+
     function stopAutoPlay() {
         if (autoPlayTimer) {
             clearInterval(autoPlayTimer);
         }
     }
-    
-    // Handle transition end
-    track.addEventListener('transitionend', () => {
-        isTransitioning = false;
-        if (currentIndex === cards.length) {
-            currentIndex = 0;
-            updateCarousel(false);
-        } else if (currentIndex === -1) {
-            currentIndex = cards.length - 1;
-            updateCarousel(false);
+
+    // Touch/Swipe functionality
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    track.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        stopAutoPlay();
+    }, { passive: true });
+
+    track.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].clientX;
+        const swipeDistance = touchEndX - touchStartX;
+
+        if (Math.abs(swipeDistance) > 50) { // minimum swipe distance
+            if (swipeDistance > 0) {
+                goToPrev();
+            } else {
+                goToNext();
+            }
         }
+        startAutoPlay();
     });
-    
-    // Pause on hover
-    track.addEventListener('mouseenter', () => {
-        isHovered = true;
+
+    // Mouse drag functionality
+    let isDragging = false;
+    let startPos = 0;
+    let currentTranslate = 0;
+
+    track.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startPos = e.clientX;
         stopAutoPlay();
     });
-    
+
+    track.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const currentPosition = e.clientX;
+        const diff = currentPosition - startPos;
+        
+        if (Math.abs(diff) > 50) {
+            isDragging = false;
+            if (diff > 0) {
+                goToPrev();
+            } else {
+                goToNext();
+            }
+            startAutoPlay();
+        }
+    });
+
+    track.addEventListener('mouseup', () => {
+        isDragging = false;
+        startAutoPlay();
+    });
+
     track.addEventListener('mouseleave', () => {
-        isHovered = false;
+        isDragging = false;
         startAutoPlay();
     });
-    
-    // Arrow navigation with debounce
-    const prevArrow = document.querySelector('.prev-arrow');
-    const nextArrow = document.querySelector('.next-arrow');
-    
-    prevArrow.addEventListener('click', () => {
-        if (isTransitioning) return; // Prevent spam clicking
-        currentIndex--;
-        updateCarousel();
-        startAutoPlay();
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+            goToPrev();
+            startAutoPlay();
+        } else if (e.key === 'ArrowRight') {
+            goToNext();
+            startAutoPlay();
+        }
     });
-    
-    nextArrow.addEventListener('click', () => {
-        if (isTransitioning) return; // Prevent spam clicking
-        currentIndex++;
-        updateCarousel();
-        startAutoPlay();
-    });
-    
-    // Dot navigation with timer reset
-    dots.forEach((dot, i) => {
-        dot.addEventListener('click', () => {
-            currentIndex = i;
-            updateCarousel();
-            startAutoPlay(); // Reset timer
-        });
-    });
-    
-    // Start autoplay initially
+
+    // Start autoplay
     startAutoPlay();
+
+    // Add button click handlers
+    prevButton.addEventListener('click', () => {
+        goToPrev();
+        startAutoPlay();
+    });
+
+    nextButton.addEventListener('click', () => {
+        goToNext();
+        startAutoPlay();
+    });
 });
 
 // Cursor effect

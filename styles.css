@@ -153,9 +153,11 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3rem;
     text-align: center;
+    gap: 1.5rem;
     width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
     padding: 0 1rem;
 }
 
@@ -172,20 +174,17 @@ body {
     font-weight: 400;
     color: var(--secondary-color);
     margin: 0;
+    text-align: center;
 }
 
 /* Best in area container */
 .best-in-area {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    font-size: 1rem;
-    letter-spacing: 2px;
-    color: var(--secondary-color);
-    font-weight: 400;
-    margin: 0;
+    position: relative;
     width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
 }
 
 /* RSS Windscreen text */
@@ -195,6 +194,9 @@ body {
     font-weight: 700;
     color: #808080;
     margin: 0;
+    width: 100%;
+    max-width: 800px;
+    text-align: center;
 }
 
 .hero-content-landing h1 span {
@@ -211,11 +213,15 @@ body {
 
 /* Rotating text container */
 .rotating-text {
+    display: block;
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    text-align: center;
+    width: 100%;
     position: relative;
-    display: inline-block;
-    width: 150px;
-    height: 1.2em;
-    line-height: 1.2em;
+    left: auto;
+    transform: none;
+    line-height: 2rem;
 }
 
 /* Rotating text animation */
@@ -223,13 +229,15 @@ body {
     content: 'SOLIHULL';
     position: absolute;
     left: 0;
-    top: 0;
+    right: 0;
+    margin: auto;
     width: 100%;
     height: 100%;
     animation: rotateWords 24s linear infinite;
     opacity: 0;
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 
 @keyframes rotateWords {
@@ -970,18 +978,10 @@ footer {
 }
 
 /* Enhanced dot navigation */
-.dot {
-    width: 30px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--shadow-color);
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.dot.active {
-    background: var(--primary-color);
-    width: 40px;
+.carousel-navigation,
+.nav-dots,
+.nav-dot {
+    display: none;
 }
 
 .carousel-arrow {
@@ -1935,4 +1935,196 @@ footer {
 /* Prevent body scroll when modal is open */
 body.modal-open {
     overflow: hidden;
+}
+
+/* Review navigation buttons */
+.testimonial-carousel {
+    position: relative;
+}
+
+.review-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 28px;
+    cursor: pointer;
+    z-index: 2;
+    opacity: 0.7;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    padding: 0;
+    padding-bottom: 4px;
+    border: 1px solid transparent;
+}
+
+.review-nav:hover {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.1);
+    backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    color: white !important;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .review-nav:hover {
+    background: rgba(0, 0, 0, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.prev-review {
+    left: 10px;
+    padding-right: 2px;
+}
+
+.next-review {
+    right: 10px;
+    padding-left: 2px;
+}
+
+/* Optional: Use better-looking arrow characters */
+.prev-review::before {
+    content: '‹';
+}
+
+.next-review::before {
+    content: '›';
+}
+
+@media (max-width: 768px) {
+    .review-nav {
+        width: 35px;
+        height: 35px;
+        font-size: 20px;
+    }
+}
+
+.location-highlights {
+    padding: 2rem 0;
+    overflow: hidden;
+}
+
+.location-badge-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem;
+}
+
+.location-badge {
+    background: var(--panel-bg);
+    padding: 1rem 1.5rem;
+    border-radius: 25px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+}
+
+.location-badge:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.badge-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.badge-star {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+}
+
+.badge-text {
+    color: var(--text-color);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.badge-location {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .location-badge {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .location-badge:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .location-badge {
+        padding: 0.8rem 1.2rem;
+    }
+    
+    .badge-location {
+        font-size: 1rem;
+    }
+}
+
+.logo-divider {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 1rem 0;
+    position: relative;
+    height: 2rem;
+}
+
+.best-in-area {
+    width: 100%;
+    text-align: center;
+    position: relative;
+    height: 2rem;
+}
+
+.rotating-text {
+    display: block;
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    text-align: center;
+    width: 100%;
+    position: relative;
+    left: auto;
+    transform: none;
+    line-height: 2rem;
+}
+
+/* If needed, adjust the hero content alignment */
+.hero-content-landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.hero-content-landing h4 {
+    text-align: center;
 }

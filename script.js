@@ -1,3 +1,4 @@
+// Updated on: [current date]
 // Add this at the beginning of your script.js
 function scrollToTop() {
     window.scrollTo({

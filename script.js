@@ -905,7 +905,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            // Log the data being sent
+            // Update the email data preparation part
             const emailData = {
                 from_name: document.getElementById('name').value,
                 reply_to: document.getElementById('email').value,
@@ -913,13 +913,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 postcode: document.getElementById('postcode').value,
                 vehicle_reg: document.getElementById('vehicle_reg').value,
                 damage_type: document.getElementById('damage_type').value,
-                photo_attachment: photoData,
-                photo_name: photoName,
-                timestamp: new Date().toISOString(),
-                has_photo: photoData ? 'Yes' : 'No'
+                has_photo: 'No',  // Default to No
+                photo_attachment: '',  // Default empty
+                photo_name: '',  // Default empty
+                timestamp: new Date().toLocaleString('en-GB', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
             };
             
-            console.log('Sending email with data:', { ...emailData, photo_attachment: photoData ? 'Data present' : 'No data' });
+            // Only add photo data if it exists
+            if (photoData) {
+                emailData.has_photo = 'Yes';
+                emailData.photo_attachment = photoData;
+                emailData.photo_name = photoName || 'photo.jpg';
+            }
+            
+            // Update the error logging
+            console.log('Sending email with data:', {
+                ...emailData,
+                photo_attachment: photoData ? `[Image data: ${Math.round((photoData.length * 3) / 4 / 1024)}KB]` : 'No image'
+            });
 
             // Send email using EmailJS with retry logic
             const sendEmail = async (retries = 3) => {

@@ -875,13 +875,51 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (photoInput.files[0]) {
                 const file = photoInput.files[0];
-                photoData = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.readAsDataURL(file);
-                });
-                photoName = file.name;
+                try {
+                    let photoData = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = () => reject(reader.error);
+                        reader.readAsDataURL(file);
+                    });
+                    
+                    // Compress the image
+                    photoData = await compressImage(photoData);
+                    photoName = file.name;
+                    
+                    // Verify size
+                    const sizeInKb = Math.round((photoData.length * 3) / 4 / 1024);
+                    console.log(`Compressed image size: ${sizeInKb}kb`);
+                    
+                    if (sizeInKb > 45) {  // Changed from 150 to 45
+                        throw new Error('Image too large even after compression');
+                    }
+                    
+                    console.log('Photo loaded and compressed successfully');
+                } catch (photoError) {
+                    console.error('Error processing photo:', photoError);
+                    alert('The image is too large. Please try a smaller image or take a lower resolution photo.');
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = 'Submit Request';
+                    return;
+                }
             }
+
+            // Log the data being sent
+            const emailData = {
+                from_name: document.getElementById('name').value,
+                reply_to: document.getElementById('email').value,
+                phone_number: document.getElementById('phone').value,
+                postcode: document.getElementById('postcode').value,
+                vehicle_reg: document.getElementById('vehicle_reg').value,
+                damage_type: document.getElementById('damage_type').value,
+                photo_attachment: photoData,
+                photo_name: photoName,
+                timestamp: new Date().toISOString(),
+                has_photo: photoData ? 'Yes' : 'No'
+            };
+            
+            console.log('Sending email with data:', { ...emailData, photo_attachment: photoData ? 'Data present' : 'No data' });
 
             // Send email using EmailJS with retry logic
             const sendEmail = async (retries = 3) => {
@@ -889,18 +927,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const response = await emailjs.send(
                         "service_ntz5x6h",
                         "template_zcvqpkh",
-                        {
-                            from_name: document.getElementById('name').value,
-                            reply_to: document.getElementById('email').value,
-                            phone_number: document.getElementById('phone').value,
-                            postcode: document.getElementById('postcode').value,
-                            vehicle_reg: document.getElementById('vehicle_reg').value,
-                            damage_type: document.getElementById('damage_type').value,
-                            photo_attachment: photoData,
-                            photo_name: photoName,
-                            timestamp: new Date().toISOString(),
-                            has_photo: photoData ? 'Yes' : 'No'
-                        }
+                        emailData
                     );
 
                     console.log("Email sent successfully", response);
@@ -914,7 +941,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
 
                 } catch (error) {
-                    console.error("Email send attempt failed", error);
+                    console.error("Email send attempt failed:", error);
+                    console.error("Error details:", {
+                        message: error.message,
+                        text: error.text,
+                        name: error.name,
+                        stack: error.stack
+                    });
+                    
                     if (retries > 0) {
                         console.log(`Retrying... ${retries} attempts left`);
                         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -927,7 +961,13 @@ document.addEventListener('DOMContentLoaded', function() {
             await sendEmail();
 
         } catch (error) {
-            console.error("Final email send failure", error);
+            console.error("Final email send failure:", error);
+            console.error("Error details:", {
+                message: error.message,
+                text: error.text,
+                name: error.name,
+                stack: error.stack
+            });
             alert('Sorry, there was an error submitting your request. Please try calling us directly at 07832 100800.');
         } finally {
             // Reset button state
@@ -1014,3 +1054,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Add this function at the top of your script
+function compressImage(base64String, maxWidth = 1200) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.src = base64String;
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            // Calculate new dimensions
+            if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Start with high quality
+            let quality = 0.9;
+            let result = canvas.toDataURL('image/jpeg', quality);
+            let sizeInKb = Math.round((result.length * 3) / 4 / 1024);
+            
+            // Gradually reduce quality until size is under 45KB
+            while (sizeInKb > 45 && quality > 0.1) {
+                quality -= 0.1;
+                result = canvas.toDataURL('image/jpeg', quality);
+                sizeInKb = Math.round((result.length * 3) / 4 / 1024);
+                console.log(`Trying quality: ${quality.toFixed(1)}, size: ${sizeInKb}KB`);
+            }
+            
+            resolve(result);
+        };
+    });
+}

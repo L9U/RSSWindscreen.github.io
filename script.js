@@ -883,18 +883,43 @@ document.addEventListener('DOMContentLoaded', function() {
             // Handle photo if exists
             const photoInput = document.getElementById('damage_photo');
             if (photoInput.files[0]) {
-                const photoData = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.onerror = () => reject(reader.error);
-                    reader.readAsDataURL(photoInput.files[0]);
-                });
+                try {
+                    // First read the file
+                    const photoData = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = () => reject(reader.error);
+                        reader.readAsDataURL(photoInput.files[0]);
+                    });
 
-                const compressedPhoto = await compressImage(photoData, 400);
-                emailData.photo = compressedPhoto;
+                    // Verify it's a valid data URL
+                    if (!photoData.startsWith('data:image/')) {
+                        throw new Error('Invalid image format');
+                    }
+
+                    // Compress the image
+                    const compressedPhoto = await compressImage(photoData, 400);
+                    
+                    // Ensure the compressed result is a valid data URL
+                    if (!compressedPhoto.startsWith('data:image/jpeg;base64,')) {
+                        throw new Error('Compression resulted in invalid format');
+                    }
+
+                    emailData.photo = compressedPhoto;
+                    console.log('Image processed successfully');
+                } catch (error) {
+                    console.error('Error processing image:', error);
+                    emailData.photo = 'https://placehold.co/400x300?text=Error+Processing+Image';
+                }
             } else {
                 emailData.photo = 'https://placehold.co/400x300?text=No+Photo';
             }
+
+            // Log the final email data (without showing the full image data)
+            console.log('Sending email with data:', {
+                ...emailData,
+                photo: emailData.photo.substring(0, 50) + '...'
+            });
 
             // Remove has_photo from emailData
             delete emailData.has_photo;
@@ -1011,59 +1036,75 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Update the compressImage function with more aggressive compression
-function compressImage(base64String, maxWidth = 400) { // Reduced to 400px width
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.src = base64String;
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            
-            // Calculate new dimensions - more aggressive scaling
-            if (width > maxWidth) {
-                height = Math.round((height * maxWidth) / width);
-                width = maxWidth;
-            }
-            
-            // Further reduce dimensions if image is tall
-            if (height > maxWidth) {
-                width = Math.round((width * maxWidth) / height);
-                height = maxWidth;
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#FFFFFF'; // Add white background
-            ctx.fillRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            // Start with very low quality
-            let quality = 0.3; // Start with 30% quality
-            let result = canvas.toDataURL('image/jpeg', quality);
-            let sizeInKb = Math.round((result.length * 3) / 4 / 1024);
-            
-            // If still too large, reduce quality further
-            while (sizeInKb > 40 && quality > 0.05) {
-                quality -= 0.05;
-                result = canvas.toDataURL('image/jpeg', quality);
-                sizeInKb = Math.round((result.length * 3) / 4 / 1024);
-                console.log(`Trying quality: ${quality.toFixed(2)}, size: ${sizeInKb}KB`);
-            }
-            
-            // If still too large after quality reduction, reduce dimensions again
-            if (sizeInKb > 40) {
-                canvas.width = width * 0.7;
-                canvas.height = height * 0.7;
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                result = canvas.toDataURL('image/jpeg', 0.2);
-            }
-            
-            resolve(result);
-        };
+function compressImage(base64String, maxWidth = 400) {
+    return new Promise((resolve, reject) => {
+        try {
+            const img = new Image();
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.onload = function() {
+                try {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    // Calculate new dimensions
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                    
+                    // Further reduce dimensions if image is tall
+                    if (height > maxWidth) {
+                        width = Math.round((width * maxWidth) / height);
+                        height = maxWidth;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    const ctx = canvas.getContext('2d');
+                    // Ensure white background
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Start with moderate quality
+                    let quality = 0.7;
+                    let result = canvas.toDataURL('image/jpeg', quality);
+                    let sizeInKb = Math.round((result.length * 3) / 4 / 1024);
+                    
+                    // Gradually reduce quality if needed
+                    while (sizeInKb > 40 && quality > 0.1) {
+                        quality -= 0.1;
+                        result = canvas.toDataURL('image/jpeg', quality);
+                        sizeInKb = Math.round((result.length * 3) / 4 / 1024);
+                        console.log(`Compression: quality=${quality.toFixed(2)}, size=${sizeInKb}KB`);
+                    }
+                    
+                    // Final size check
+                    if (sizeInKb > 40) {
+                        // If still too large, reduce dimensions further
+                        canvas.width = Math.round(width * 0.7);
+                        canvas.height = Math.round(height * 0.7);
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        result = canvas.toDataURL('image/jpeg', 0.5);
+                    }
+                    
+                    // Verify final result is a valid data URL
+                    if (!result.startsWith('data:image/jpeg;base64,')) {
+                        reject(new Error('Failed to generate valid image data URL'));
+                    } else {
+                        resolve(result);
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            img.src = base64String;
+        } catch (error) {
+            reject(error);
+        }
     });
 }

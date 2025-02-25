@@ -862,120 +862,59 @@ document.addEventListener('DOMContentLoaded', function() {
     bookingForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        // Add loading state to button
         const submitButton = bookingForm.querySelector('button');
         submitButton.disabled = true;
         submitButton.innerHTML = 'Sending...';
 
         try {
-            // Convert image to base64 if it exists
-            const photoInput = document.getElementById('damage_photo');
-            let photoData = '';
-            let photoName = '';
-            
-            if (photoInput.files[0]) {
-                const file = photoInput.files[0];
-                try {
-                    let photoData = await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result);
-                        reader.onerror = () => reject(reader.error);
-                        reader.readAsDataURL(file);
-                    });
-                    
-                    // Compress the image
-                    photoData = await compressImage(photoData);
-                    photoName = file.name;
-                    
-                    // Verify size
-                    const sizeInKb = Math.round((photoData.length * 3) / 4 / 1024);
-                    console.log(`Compressed image size: ${sizeInKb}kb`);
-                    
-                    if (sizeInKb > 45) {  // Changed from 150 to 45
-                        throw new Error('Image too large even after compression');
-                    }
-                    
-                    console.log('Photo loaded and compressed successfully');
-                } catch (photoError) {
-                    console.error('Error processing photo:', photoError);
-                    alert('The image is too large. Please try a smaller image or take a lower resolution photo.');
-                    submitButton.disabled = false;
-                    submitButton.innerHTML = 'Submit Request';
-                    return;
-                }
-            }
-
-            // Update the email data preparation part
+            // Basic data
             const emailData = {
-                from_name: document.getElementById('name').value,
-                reply_to: document.getElementById('email').value,
-                phone_number: document.getElementById('phone').value,
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
                 postcode: document.getElementById('postcode').value,
                 vehicle_reg: document.getElementById('vehicle_reg').value,
                 damage_type: document.getElementById('damage_type').value,
-                has_photo: 'No',  // Default to No
-                photo_attachment: '',  // Default empty
-                photo_name: '',  // Default empty
-                timestamp: new Date().toLocaleString('en-GB', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                })
+                timestamp: new Date().toLocaleString('en-GB'),
+                photo: '',  // Default empty
+                has_photo: 'No'
             };
-            
-            // Only add photo data if it exists
-            if (photoData) {
-                emailData.has_photo = 'Yes';
-                emailData.photo_attachment = photoData;
-                emailData.photo_name = photoName || 'photo.jpg';
+
+            // Handle photo if exists
+            const photoInput = document.getElementById('damage_photo');
+            if (photoInput.files[0]) {
+                const photoData = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = () => reject(reader.error);
+                    reader.readAsDataURL(photoInput.files[0]);
+                });
+
+                const compressedPhoto = await compressImage(photoData, 400);
+                emailData.photo = compressedPhoto;
+            } else {
+                emailData.photo = 'https://placehold.co/400x300?text=No+Photo';
             }
+
+            // Remove has_photo from emailData
+            delete emailData.has_photo;
+
+            // Send single email
+            const response = await emailjs.send(
+                "service_yt0rvfz",
+                "template_q52pbxo",
+                emailData
+            );
+
+            console.log("Email sent successfully", response);
+            alert('Request submitted successfully! We will contact you shortly to arrange the service.');
+            bookingForm.reset();
             
-            // Update the error logging
-            console.log('Sending email with data:', {
-                ...emailData,
-                photo_attachment: photoData ? `[Image data: ${Math.round((photoData.length * 3) / 4 / 1024)}KB]` : 'No image'
-            });
-
-            // Send email using EmailJS with retry logic
-            const sendEmail = async (retries = 3) => {
-                try {
-                    const response = await emailjs.send(
-                        "service_ntz5x6h",
-                        "template_zcvqpkh",
-                        emailData
-                    );
-
-                    console.log("Email sent successfully", response);
-                    alert('Request submitted successfully! We will contact you shortly to arrange the service.');
-                    bookingForm.reset();
-                    
-                    // Clear image preview
-                    const preview = document.querySelector('.file-preview');
-                    if (preview) {
-                        preview.innerHTML = '';
-                    }
-
-                } catch (error) {
-                    console.error("Email send attempt failed:", error);
-                    console.error("Error details:", {
-                        message: error.message,
-                        text: error.text,
-                        name: error.name,
-                        stack: error.stack
-                    });
-                    
-                    if (retries > 0) {
-                        console.log(`Retrying... ${retries} attempts left`);
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        return sendEmail(retries - 1);
-                    }
-                    throw error;
-                }
-            };
-
-            await sendEmail();
+            // Clear image preview
+            const preview = document.querySelector('.file-preview');
+            if (preview) {
+                preview.innerHTML = '';
+            }
 
         } catch (error) {
             console.error("Final email send failure:", error);
@@ -987,7 +926,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             alert('Sorry, there was an error submitting your request. Please try calling us directly at 07832 100800.');
         } finally {
-            // Reset button state
             submitButton.disabled = false;
             submitButton.innerHTML = 'Submit Request';
         }
@@ -1072,8 +1010,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Add this function at the top of your script
-function compressImage(base64String, maxWidth = 1200) {
+// Update the compressImage function with more aggressive compression
+function compressImage(base64String, maxWidth = 400) { // Reduced to 400px width
     return new Promise((resolve) => {
         const img = new Image();
         img.src = base64String;
@@ -1082,29 +1020,47 @@ function compressImage(base64String, maxWidth = 1200) {
             let width = img.width;
             let height = img.height;
             
-            // Calculate new dimensions
+            // Calculate new dimensions - more aggressive scaling
             if (width > maxWidth) {
                 height = Math.round((height * maxWidth) / width);
                 width = maxWidth;
+            }
+            
+            // Further reduce dimensions if image is tall
+            if (height > maxWidth) {
+                width = Math.round((width * maxWidth) / height);
+                height = maxWidth;
             }
             
             canvas.width = width;
             canvas.height = height;
             
             const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#FFFFFF'; // Add white background
+            ctx.fillRect(0, 0, width, height);
             ctx.drawImage(img, 0, 0, width, height);
             
-            // Start with high quality
-            let quality = 0.9;
+            // Start with very low quality
+            let quality = 0.3; // Start with 30% quality
             let result = canvas.toDataURL('image/jpeg', quality);
             let sizeInKb = Math.round((result.length * 3) / 4 / 1024);
             
-            // Gradually reduce quality until size is under 45KB
-            while (sizeInKb > 45 && quality > 0.1) {
-                quality -= 0.1;
+            // If still too large, reduce quality further
+            while (sizeInKb > 40 && quality > 0.05) {
+                quality -= 0.05;
                 result = canvas.toDataURL('image/jpeg', quality);
                 sizeInKb = Math.round((result.length * 3) / 4 / 1024);
-                console.log(`Trying quality: ${quality.toFixed(1)}, size: ${sizeInKb}KB`);
+                console.log(`Trying quality: ${quality.toFixed(2)}, size: ${sizeInKb}KB`);
+            }
+            
+            // If still too large after quality reduction, reduce dimensions again
+            if (sizeInKb > 40) {
+                canvas.width = width * 0.7;
+                canvas.height = height * 0.7;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                result = canvas.toDataURL('image/jpeg', 0.2);
             }
             
             resolve(result);

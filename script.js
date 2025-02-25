@@ -871,13 +871,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // Convert image to base64 if it exists
             const photoInput = document.getElementById('damage_photo');
             let photoData = '';
+            let photoName = '';
             
             if (photoInput.files[0]) {
+                const file = photoInput.files[0];
                 photoData = await new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onloadend = () => resolve(reader.result);
-                    reader.readAsDataURL(photoInput.files[0]);
+                    reader.readAsDataURL(file);
                 });
+                photoName = file.name;
             }
 
             // Send email using EmailJS with retry logic
@@ -894,7 +897,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             vehicle_reg: document.getElementById('vehicle_reg').value,
                             damage_type: document.getElementById('damage_type').value,
                             photo_attachment: photoData,
-                            timestamp: new Date().toISOString()
+                            photo_name: photoName,
+                            timestamp: new Date().toISOString(),
+                            has_photo: photoData ? 'Yes' : 'No'
                         }
                     );
 
@@ -967,7 +972,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Add image preview functionality
+// Update image preview functionality
 document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('damage_photo');
     const preview = document.querySelector('.file-preview');
@@ -979,14 +984,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 const reader = new FileReader();
                 
                 reader.onload = function(e) {
-                    // Create or update preview image
-                    let img = preview.querySelector('img');
-                    if (!img) {
-                        img = document.createElement('img');
-                        preview.appendChild(img);
-                    }
+                    // Clear existing preview
+                    preview.innerHTML = '';
+                    
+                    // Create image
+                    const img = document.createElement('img');
                     img.src = e.target.result;
                     img.style.display = 'block';
+                    
+                    // Create remove button
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-image';
+                    removeBtn.innerHTML = '×';
+                    removeBtn.style.display = 'flex';
+                    
+                    // Add remove functionality
+                    removeBtn.onclick = function() {
+                        preview.innerHTML = '';
+                        fileInput.value = '';
+                    };
+                    
+                    // Add elements to preview
+                    preview.appendChild(img);
+                    preview.appendChild(removeBtn);
                 }
                 
                 reader.readAsDataURL(file);

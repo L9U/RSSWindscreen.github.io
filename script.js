@@ -934,3 +934,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Add image preview functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('damage_photo');
+    const preview = document.querySelector('.file-preview');
+
+    if (fileInput && preview) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    // Create or update preview image
+                    let img = preview.querySelector('img');
+                    if (!img) {
+                        img = document.createElement('img');
+                        preview.appendChild(img);
+                    }
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                }
+                
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});

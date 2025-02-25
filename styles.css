@@ -2171,15 +2171,16 @@ body.modal-open {
     }
 }
 
-/* File input styling */
+/* Update file input styling */
 .file-input {
+    display: block;  /* Show the default input */
     width: 100%;
     padding: 0.75rem;
     border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 1rem;
+    border-radius: 25px;
     background: var(--background-color);
     color: var(--text-color);
+    margin-bottom: 1rem;
 }
 
 .file-preview {
@@ -2193,49 +2194,4 @@ body.modal-open {
     max-height: 200px;
     border-radius: 4px;
     display: none;
-}
-
-/* Photo upload buttons */
-.photo-buttons {
-    display: flex;
-    gap: 1.5rem;  /* Increased from 1rem */
-    margin: 1.5rem 0;  /* Increased from 1rem */
-    padding: 0 0.5rem;  /* Added padding on sides */
-}
-
-.camera-btn,
-.upload-btn {
-    flex: 1;
-    padding: 1rem;  /* Increased from 0.75rem */
-    border: 1px solid var(--border-color);
-    border-radius: 25px;
-    background: var(--background-color);
-    color: var(--text-color);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 1rem;  /* Added explicit font size */
-}
-
-.camera-btn:hover,
-.upload-btn:hover {
-    background: var(--primary-color);
-    color: white;
-}
-
-/* Hide the default file input */
-.file-input {
-    display: none;
-}
-
-/* Add responsive adjustments */
-@media (max-width: 768px) {
-    .photo-buttons {
-        gap: 2rem;  /* Even more space on mobile */
-        flex-direction: column;  /* Stack buttons on mobile */
-    }
-
-    .camera-btn,
-    .upload-btn {
-        padding: 1.2rem;  /* Larger touch targets on mobile */
-    }
 }

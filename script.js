@@ -994,35 +994,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
-// Add device camera detection
-function hasCamera() {
-    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-}
-
-// Update photo handling functions
-function openCamera() {
-    const fileInput = document.getElementById('damage_photo');
-    if (hasCamera()) {
-        fileInput.setAttribute('capture', 'environment');
-    }
-    fileInput.click();
-}
-
-function openFileUpload() {
-    const fileInput = document.getElementById('damage_photo');
-    fileInput.removeAttribute('capture');
-    fileInput.click();
-}
-
-// Add this to your DOMContentLoaded event
-document.addEventListener('DOMContentLoaded', function() {
-    // Hide camera button if no camera is available
-    const cameraBtn = document.querySelector('.camera-btn');
-    if (cameraBtn && !hasCamera()) {
-        cameraBtn.style.display = 'none';
-        document.querySelector('.upload-btn').style.width = '100%';
-    }
-    
-    // ... rest of your DOMContentLoaded code ...
-});

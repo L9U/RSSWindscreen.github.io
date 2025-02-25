@@ -192,7 +192,7 @@ body {
     font-size: 4.5rem;
     line-height: 1;
     font-weight: 700;
-    color: white;
+    color: #ffffff;
     margin: 0;
     width: 100%;
     max-width: 800px;
@@ -2127,4 +2127,46 @@ body.modal-open {
 
 .hero-content-landing h4 {
     text-align: center;
+}
+
+/* Booking page specific styles */
+.booking-page {
+    min-height: 100vh;
+    background: var(--background-color);
+    padding: 2rem;
+}
+
+.back-button {
+    color: var(--text-color);
+    text-decoration: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.back-button:hover {
+    color: var(--primary-color);
+    transform: translateX(-5px);
+}
+
+/* Make the booking container wider on the dedicated page */
+.booking-page .booking-container {
+    max-width: 800px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2rem;
+    background: var(--panel-bg);
+    border-radius: 25px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+    .booking-page {
+        padding: 1rem;
+    }
+    
+    .booking-page .booking-container {
+        padding: 1.5rem;
+    }
 }

@@ -2194,3 +2194,33 @@ body.modal-open {
     border-radius: 4px;
     display: none;
 }
+
+/* Photo upload buttons */
+.photo-buttons {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.camera-btn,
+.upload-btn {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 25px;
+    background: var(--background-color);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.camera-btn:hover,
+.upload-btn:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* Hide the default file input */
+.file-input {
+    display: none;
+}

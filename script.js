@@ -859,7 +859,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize EmailJS with your public key
     emailjs.init("p7N91eLXRfrehkYPR");
     
-    bookingForm.addEventListener('submit', function(e) {
+    bookingForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         // Add loading state to button
@@ -867,36 +867,68 @@ document.addEventListener('DOMContentLoaded', function() {
         submitButton.disabled = true;
         submitButton.innerHTML = 'Sending...';
 
-        // Send email using EmailJS
-        emailjs.send(
-            "service_ntz5x6h",
-            "template_zcvqpkh",
-            {
-                from_name: document.getElementById('name').value,
-                reply_to: document.getElementById('email').value,
-                phone_number: document.getElementById('phone').value,
-                postcode: document.getElementById('postcode').value,
-                vehicle_reg: document.getElementById('vehicle_reg').value,
-                vehicle_make: document.getElementById('vehicle_make').value,
-                damage_type: document.getElementById('damage_type').value,
-                damage_location: document.getElementById('damage_location').value,
-                message: document.getElementById('message').value
+        try {
+            // Convert image to base64 if it exists
+            const photoInput = document.getElementById('damage_photo');
+            let photoData = '';
+            
+            if (photoInput.files[0]) {
+                photoData = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(photoInput.files[0]);
+                });
             }
-        )
-        .then(function(response) {
-            console.log("SUCCESS", response);
-            alert('Request submitted successfully! We will contact you shortly to arrange the service.');
-            bookingForm.reset();
-        })
-        .catch(function(error) {
-            console.log("FAILED", error);
-            alert('Sorry, there was an error submitting your request. Please try calling us directly.');
-        })
-        .finally(function() {
+
+            // Send email using EmailJS with retry logic
+            const sendEmail = async (retries = 3) => {
+                try {
+                    const response = await emailjs.send(
+                        "service_ntz5x6h",
+                        "template_zcvqpkh",
+                        {
+                            from_name: document.getElementById('name').value,
+                            reply_to: document.getElementById('email').value,
+                            phone_number: document.getElementById('phone').value,
+                            postcode: document.getElementById('postcode').value,
+                            vehicle_reg: document.getElementById('vehicle_reg').value,
+                            damage_type: document.getElementById('damage_type').value,
+                            photo_attachment: photoData,
+                            timestamp: new Date().toISOString()
+                        }
+                    );
+
+                    console.log("Email sent successfully", response);
+                    alert('Request submitted successfully! We will contact you shortly to arrange the service.');
+                    bookingForm.reset();
+                    
+                    // Clear image preview
+                    const preview = document.querySelector('.file-preview');
+                    if (preview) {
+                        preview.innerHTML = '';
+                    }
+
+                } catch (error) {
+                    console.error("Email send attempt failed", error);
+                    if (retries > 0) {
+                        console.log(`Retrying... ${retries} attempts left`);
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        return sendEmail(retries - 1);
+                    }
+                    throw error;
+                }
+            };
+
+            await sendEmail();
+
+        } catch (error) {
+            console.error("Final email send failure", error);
+            alert('Sorry, there was an error submitting your request. Please try calling us directly at 07832 100800.');
+        } finally {
             // Reset button state
             submitButton.disabled = false;
             submitButton.innerHTML = 'Submit Request';
-        });
+        }
     });
 });
 
@@ -961,4 +993,36 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+});
+
+// Add device camera detection
+function hasCamera() {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+}
+
+// Update photo handling functions
+function openCamera() {
+    const fileInput = document.getElementById('damage_photo');
+    if (hasCamera()) {
+        fileInput.setAttribute('capture', 'environment');
+    }
+    fileInput.click();
+}
+
+function openFileUpload() {
+    const fileInput = document.getElementById('damage_photo');
+    fileInput.removeAttribute('capture');
+    fileInput.click();
+}
+
+// Add this to your DOMContentLoaded event
+document.addEventListener('DOMContentLoaded', function() {
+    // Hide camera button if no camera is available
+    const cameraBtn = document.querySelector('.camera-btn');
+    if (cameraBtn && !hasCamera()) {
+        cameraBtn.style.display = 'none';
+        document.querySelector('.upload-btn').style.width = '100%';
+    }
+    
+    // ... rest of your DOMContentLoaded code ...
 });

@@ -884,7 +884,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const photoInput = document.getElementById('damage_photo');
             if (photoInput.files[0]) {
                 try {
-                    // First read the file
                     const photoData = await new Promise((resolve, reject) => {
                         const reader = new FileReader();
                         reader.onloadend = () => resolve(reader.result);
@@ -892,23 +891,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         reader.readAsDataURL(photoInput.files[0]);
                     });
 
-                    // Verify it's a valid data URL
-                    if (!photoData.startsWith('data:image/')) {
-                        throw new Error('Invalid image format');
-                    }
+                    // Compress the image (we can be less aggressive now)
+                    const compressedPhoto = await compressImage(photoData, 800); // Increased size
 
-                    // Compress the image
-                    const compressedPhoto = await compressImage(photoData, 400);
-                    
-                    // Ensure the compressed result is a valid data URL
-                    if (!compressedPhoto.startsWith('data:image/jpeg;base64,')) {
-                        throw new Error('Compression resulted in invalid format');
-                    }
-
-                    emailData.photo = compressedPhoto;
-                    console.log('Image processed successfully');
+                    // Upload to Imgur
+                    const imgurUrl = await uploadToImgur(compressedPhoto);
+                    emailData.photo = imgurUrl;
+                    console.log('Image uploaded to Imgur:', imgurUrl);
                 } catch (error) {
-                    console.error('Error processing image:', error);
+                    console.error('Error processing/uploading image:', error);
                     emailData.photo = 'https://placehold.co/400x300?text=Error+Processing+Image';
                 }
             } else {
@@ -1035,8 +1026,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Update the compressImage function with more aggressive compression
-function compressImage(base64String, maxWidth = 400) {
+// Update the compression function to be less aggressive
+function compressImage(base64String, maxWidth = 800) { // Increased from 400 to 800
     return new Promise((resolve, reject) => {
         try {
             const img = new Image();
@@ -1047,49 +1038,35 @@ function compressImage(base64String, maxWidth = 400) {
                     let width = img.width;
                     let height = img.height;
                     
-                    // Calculate new dimensions
+                    // Calculate new dimensions - less aggressive scaling
                     if (width > maxWidth) {
                         height = Math.round((height * maxWidth) / width);
                         width = maxWidth;
                     }
                     
-                    // Further reduce dimensions if image is tall
-                    if (height > maxWidth) {
-                        width = Math.round((width * maxWidth) / height);
-                        height = maxWidth;
+                    // Only reduce height if it's extremely tall
+                    if (height > maxWidth * 1.5) {
+                        width = Math.round((width * maxWidth * 1.5) / height);
+                        height = maxWidth * 1.5;
                     }
                     
                     canvas.width = width;
                     canvas.height = height;
                     
                     const ctx = canvas.getContext('2d');
-                    // Ensure white background
                     ctx.fillStyle = '#FFFFFF';
                     ctx.fillRect(0, 0, width, height);
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // Start with moderate quality
-                    let quality = 0.7;
+                    // Start with high quality
+                    let quality = 0.9;
                     let result = canvas.toDataURL('image/jpeg', quality);
                     let sizeInKb = Math.round((result.length * 3) / 4 / 1024);
                     
-                    // Gradually reduce quality if needed
-                    while (sizeInKb > 40 && quality > 0.1) {
-                        quality -= 0.1;
+                    // Only reduce quality if the image is very large
+                    if (sizeInKb > 2048) { // 2MB limit
+                        quality = 0.7;
                         result = canvas.toDataURL('image/jpeg', quality);
-                        sizeInKb = Math.round((result.length * 3) / 4 / 1024);
-                        console.log(`Compression: quality=${quality.toFixed(2)}, size=${sizeInKb}KB`);
-                    }
-                    
-                    // Final size check
-                    if (sizeInKb > 40) {
-                        // If still too large, reduce dimensions further
-                        canvas.width = Math.round(width * 0.7);
-                        canvas.height = Math.round(height * 0.7);
-                        ctx.fillStyle = '#FFFFFF';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        result = canvas.toDataURL('image/jpeg', 0.5);
                     }
                     
                     // Verify final result is a valid data URL
@@ -1107,4 +1084,34 @@ function compressImage(base64String, maxWidth = 400) {
             reject(error);
         }
     });
+}
+
+// Add this function to handle Imgur uploads
+async function uploadToImgur(base64Image) {
+    // Remove the data:image/jpeg;base64, prefix
+    const base64Data = base64Image.split(',')[1];
+    
+    try {
+        const response = await fetch('https://api.imgur.com/3/image', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'c4c4d4c3de5f6a9', // You'll need to get this
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                image: base64Data,
+                type: 'base64'
+            })
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error('Imgur upload failed');
+        }
+
+        return data.data.link;
+    } catch (error) {
+        console.error('Imgur upload error:', error);
+        throw error;
+    }
 }

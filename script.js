@@ -875,35 +875,45 @@ document.addEventListener('DOMContentLoaded', function() {
                 postcode: document.getElementById('postcode').value,
                 vehicle_reg: document.getElementById('vehicle_reg').value,
                 damage_type: document.getElementById('damage_type').value,
-                timestamp: new Date().toLocaleString('en-GB'),
+                timestamp: new Date().toLocaleString('en-GB', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                }),
                 photo: '',  // Default empty
                 has_photo: 'No'
             };
 
             // Handle photo if exists
             const photoInput = document.getElementById('damage_photo');
-            if (photoInput.files[0]) {
+            if (photoInput.files.length > 0) {
                 try {
-                    const photoData = await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result);
-                        reader.onerror = () => reject(reader.error);
-                        reader.readAsDataURL(photoInput.files[0]);
+                    const uploadPromises = Array.from(photoInput.files).map(async file => {
+                        const photoData = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.onerror = () => reject(reader.error);
+                            reader.readAsDataURL(file);
+                        });
+
+                        const compressedPhoto = await compressImage(photoData, 800);
+                        const imgurUrl = await uploadToImgur(compressedPhoto);
+                        return imgurUrl;
                     });
 
-                    // Compress the image (we can be less aggressive now)
-                    const compressedPhoto = await compressImage(photoData, 800); // Increased size
-
-                    // Upload to Imgur
-                    const imgurUrl = await uploadToImgur(compressedPhoto);
-                    emailData.photo = imgurUrl;
-                    console.log('Image uploaded to Imgur:', imgurUrl);
+                    const photoUrls = await Promise.all(uploadPromises);
+                    emailData.photos = photoUrls;
+                    emailData.photo = photoUrls.join('\n'); // For backward compatibility
+                    console.log('Images uploaded to Imgur:', photoUrls);
                 } catch (error) {
-                    console.error('Error processing/uploading image:', error);
-                    emailData.photo = 'https://placehold.co/400x300?text=Error+Processing+Image';
+                    console.error('Error processing/uploading images:', error);
+                    emailData.photo = 'https://placehold.co/400x300?text=Error+Processing+Images';
                 }
             } else {
-                emailData.photo = 'https://placehold.co/400x300?text=No+Photo';
+                emailData.photo = 'https://placehold.co/400x300?text=No+Photos';
             }
 
             // Log the final email data (without showing the full image data)
@@ -915,14 +925,45 @@ document.addEventListener('DOMContentLoaded', function() {
             // Remove has_photo from emailData
             delete emailData.has_photo;
 
-            // Send single email
+            // Add priority flag and subject line
+            emailData.priority = 'high';
+            emailData.subject = `Urgent: New Windscreen Service Request - ${emailData.timestamp}`;
+
+            // Send with specific configuration
             const response = await emailjs.send(
                 "service_yt0rvfz",
                 "template_q52pbxo",
-                emailData
+                emailData,
+                "p7N91eLXRfrehkYPR",
+                {
+                    timeZone: 'Europe/London',
+                    priority: 'high',
+                    retryCount: 3  // Will retry sending 3 times if failed
+                }
             );
 
+            // Verify the send was successful
+            if (response.status !== 200) {
+                throw new Error(`Email send failed with status: ${response.status}`);
+            }
+
             console.log("Email sent successfully", response);
+            
+            // Add backup notification (optional)
+            try {
+                await emailjs.send(
+                    "service_yt0rvfz",
+                    "template_backup",  // Create a simpler backup template
+                    {
+                        name: emailData.name,
+                        phone: emailData.phone,
+                        timestamp: emailData.timestamp
+                    }
+                );
+            } catch (backupError) {
+                console.error("Backup notification failed:", backupError);
+            }
+
             alert('Request submitted successfully! We will contact you shortly to arrange the service.');
             bookingForm.reset();
             
@@ -990,38 +1031,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (fileInput && preview) {
         fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
+            const files = Array.from(e.target.files);
+            
+            files.forEach(file => {
                 const reader = new FileReader();
                 
                 reader.onload = function(e) {
-                    // Clear existing preview
-                    preview.innerHTML = '';
+                    // Create container for this preview
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'preview-item';
                     
                     // Create image
                     const img = document.createElement('img');
                     img.src = e.target.result;
-                    img.style.display = 'block';
                     
                     // Create remove button
                     const removeBtn = document.createElement('button');
                     removeBtn.className = 'remove-image';
                     removeBtn.innerHTML = '×';
-                    removeBtn.style.display = 'flex';
                     
                     // Add remove functionality
-                    removeBtn.onclick = function() {
-                        preview.innerHTML = '';
-                        fileInput.value = '';
+                    removeBtn.onclick = function(e) {
+                        e.preventDefault();
+                        previewItem.remove();
+                        // Update the file input
+                        const remainingPreviews = preview.querySelectorAll('.preview-item').length;
+                        if (remainingPreviews === 0) {
+                            fileInput.value = '';
+                        }
                     };
                     
                     // Add elements to preview
-                    preview.appendChild(img);
-                    preview.appendChild(removeBtn);
+                    previewItem.appendChild(img);
+                    previewItem.appendChild(removeBtn);
+                    preview.appendChild(previewItem);
                 }
                 
                 reader.readAsDataURL(file);
-            }
+            });
         });
     }
 });

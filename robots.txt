@@ -1,1 +1,10 @@
-Sitemap: https://rsswindscreen.co.uk/sitemap.xml 
+User-agent: *
+Allow: /
+Allow: /bookings/
+
+# Important files
+Allow: /sitemap.xml
+Sitemap: https://rsswindscreen.co.uk/sitemap.xml
+
+# Crawl-delay for better performance
+Crawl-delay: 5 

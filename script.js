@@ -869,7 +869,6 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Basic data
             const emailData = {
-                from_name: document.getElementById('name').value,
                 name: document.getElementById('name').value,
                 email: document.getElementById('email').value,
                 phone: document.getElementById('phone').value,
@@ -928,7 +927,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Add priority flag and subject line
             emailData.priority = 'high';
-            emailData.subject = `New Windscreen Service Request from ${emailData.from_name}`;
+            emailData.subject = `Urgent: New Windscreen Service Request - ${emailData.timestamp}`;
 
             // Send with specific configuration
             const response = await emailjs.send(

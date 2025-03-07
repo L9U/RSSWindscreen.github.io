@@ -2252,3 +2252,48 @@ body.modal-open {
     height: 1.5em; /* Set a fixed height */
     overflow: hidden;
 }
+
+.konami-trail {
+    position: fixed;
+    pointer-events: none;
+    color: #007bff !important; /* Blue color */
+    font-size: 24px !important;
+    font-weight: bold;
+    transform: translate(-50%, -50%);
+    animation: konamiFadeOut 2s ease-out forwards;
+    white-space: nowrap;
+    z-index: 9999;
+    text-shadow: 0 0 10px rgba(0, 123, 255, 0.5); /* Matching blue glow */
+}
+
+@keyframes konamiFadeOut {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+    50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.5);
+    }
+}
+
+.snake-game {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
+}
+
+.snake-game canvas {
+    border: 2px solid #007bff;
+    border-radius: 5px;
+}

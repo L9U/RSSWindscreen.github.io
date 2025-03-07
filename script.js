@@ -1162,3 +1162,74 @@ async function uploadToImgur(base64Image) {
         throw error;
     }
 }
+
+// Keyboard: ↑↑↓↓←→←→BA
+// Touch: top-top-bottom-bottom-left-right-left-right
+let konamiCode = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
+let touchCode = ['top', 'top', 'bottom', 'bottom', 'left', 'right', 'left', 'right'];
+let inputSequence = [];
+let touchSequence = [];
+let lastTapTime = 0;
+
+document.addEventListener("keydown", (e) => {
+    inputSequence.push(e.keyCode);
+    
+    if (inputSequence.toString().indexOf(konamiCode) >= 0) {
+        showEasterEgg();
+        inputSequence = [];
+    }
+});
+
+document.addEventListener('touchstart', (e) => {
+    const currentTime = Date.now();
+    const tapGap = currentTime - lastTapTime;
+    
+    if (tapGap > 1500) {
+        touchSequence = [];
+    }
+    
+    const touch = e.touches[0];
+    const windowHeight = window.innerHeight;
+    const windowWidth = window.innerWidth;
+    
+    let position;
+    if (touch.clientY < windowHeight / 3) {
+        position = 'top';
+    } else if (touch.clientY > (windowHeight * 2/3)) {
+        position = 'bottom';
+    } else if (touch.clientX < windowWidth / 3) {
+        position = 'left';
+    } else if (touch.clientX > (windowWidth * 2/3)) {
+        position = 'right';
+    } else {
+        position = 'center';
+        touchSequence = [];
+    }
+    
+    touchSequence.push(position);
+    lastTapTime = currentTime;
+    
+    if (touchSequence.length >= touchCode.length) {
+        const lastEightTaps = touchSequence.slice(-touchCode.length);
+        if (lastEightTaps.toString() === touchCode.toString()) {
+            showEasterEgg();
+            touchSequence = [];
+        }
+        if (touchSequence.length > touchCode.length * 2) {
+            touchSequence.shift();
+        }
+    }
+});
+
+function showEasterEgg() {
+    const trail = document.createElement('div');
+    trail.className = 'cursor-trail konami-trail';
+    trail.style.left = '50%';
+    trail.style.top = '50%';
+    trail.textContent = '✦ Made By: Matin Motaghi ✦';
+    document.body.appendChild(trail);
+    
+    setTimeout(() => {
+        trail.remove();
+    }, 2000);
+}
